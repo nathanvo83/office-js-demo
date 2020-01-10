@@ -123,7 +123,7 @@ class App extends React.Component<AppProps, AppState> {
 
   updateAppContent = async () => {
     clearTimeout(this.aliveId);
-    this.aliveId = setTimeout(this.process, 3000);
+    this.aliveId = setTimeout(this.process, 2000);
   };
 
   showTime = (title: string) => {

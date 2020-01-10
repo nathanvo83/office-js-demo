@@ -6,12 +6,13 @@ import { WordTypeCount } from "../../models/WordTypeCount";
 
 export class Analysis {
   // private previousData: string[];
-  private previousText: string;
+  // private previousText: string;
   private previousLength: number;
 
   constructor() {
     // this.previousData = [];
-    this.previousText = "";
+    // this.previousText = "";
+    this.previousLength = 0;
   }
 
   wordCount(item: string) {
