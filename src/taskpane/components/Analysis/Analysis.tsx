@@ -7,6 +7,7 @@ import { WordTypeCount } from "../../models/WordTypeCount";
 export class Analysis {
   // private previousData: string[];
   private previousText: string;
+  private previousLength: number;
 
   constructor() {
     // this.previousData = [];
@@ -142,10 +143,20 @@ export class Analysis {
   //   return true;
   // }
 
-  isTextChange(text) {
-    if (this.previousText.localeCompare(text) !== 0) {
+  //   isTextChange(text) {
+  //     if (this.previousText.localeCompare(text) !== 0) {
+  //       console.log("text change");
+  //       this.previousText = text;
+  //       return true;
+  //     }
+  //     console.log("text does not change");
+  //     return false;
+  //   }
+
+  isTextChange(text: string) {
+    if (text.length !== this.previousLength) {
       console.log("text change");
-      this.previousText = text;
+      this.previousLength = text.length;
       return true;
     }
     console.log("text does not change");
