@@ -26,17 +26,14 @@ class ChunkDetails extends React.Component<AppProps, AppState> {
     setChunkDetailsData(chunkDetailsData);
   };
 
-  loadHandler = () => {
-    // console.log("chunkData =>", this.props.chunkData);
-  };
-
   render() {
     const { chunkDetailsData } = this.props;
 
     return (
       <div>
+        <hr></hr>
         <Button onClick={this.chunkHandler}>Close</Button>
-        <Button onClick={this.loadHandler}>load</Button>
+
         <div>
           {chunkDetailsData.data.content.map((item, idx) => (
             <div key={idx}>{item}</div>

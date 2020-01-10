@@ -19,6 +19,16 @@ class ChunkList extends React.Component<AppProps, AppState> {
 
   componentDidMount() {}
 
+  moveCursor = (section: Section) => {
+    console.log(section.title);
+    Word.run(async context => {
+      var searchResults = context.document.body.search(section.content[0], { matchPrefix: true }).getFirst();
+
+      searchResults.select("Start");
+      await context.sync();
+    });
+  };
+
   chunkHandler = (section: Section, idx: number) => {
     const { setChunkDetailsData, chunkDetailsData } = this.props;
     // const chunkDetailsData = new ChunkDetailsData(idx, true, section);
@@ -27,13 +37,14 @@ class ChunkList extends React.Component<AppProps, AppState> {
     chunkDetailsData.isShow = true;
     chunkDetailsData.data = section;
     setChunkDetailsData(chunkDetailsData);
+    this.moveCursor(section);
   };
 
   render() {
     const { list } = this.props;
 
     return (
-      <div>
+      <>
         {list.map((item, idx) => (
           <div
             key={idx}
@@ -44,7 +55,7 @@ class ChunkList extends React.Component<AppProps, AppState> {
             <Chunk title={item.title}></Chunk>
           </div>
         ))}
-      </div>
+      </>
     );
   }
 }

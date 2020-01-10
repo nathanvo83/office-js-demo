@@ -1,7 +1,5 @@
 import * as React from "react";
 import { connect } from "react-redux";
-import { delay } from "redux-saga/effects";
-
 import { Button, ButtonType } from "office-ui-fabric-react";
 import Progress from "./Progress";
 
@@ -26,30 +24,36 @@ export interface AppProps {
 export interface AppState {
   isLoad: boolean;
   result: Result;
-  time: string;
-  text: string;
+  // time: string;
+  // text: string;
 }
 
 class App extends React.Component<AppProps, AppState> {
   private timerID;
+  private aliveId;
   private analysis: Analysis;
   private flagRuning: boolean = false;
 
+  constructor(props, context) {
+    super(props, context);
+    this.analysis = new Analysis();
+  }
+
   componentWillUnmount() {
-    clearInterval(this.timerID);
+    clearTimeout(this.timerID);
+    clearInterval(this.aliveId);
   }
 
   componentDidMount() {
-    this.analysis = new Analysis();
-
-    const d = new Date();
     this.setState({
       isLoad: false,
-      result: new Result(),
-      time: d.toString(),
-      text: "---"
+      result: new Result()
+      // text: "---"
     });
 
+    // this.aliveId = setInterval(this.keepAlive, 1000);
+
+    this.subcribeToEvent();
     this.timerID = setTimeout(this.updateAppContent);
   }
 
@@ -73,8 +77,7 @@ class App extends React.Component<AppProps, AppState> {
   };
 
   setCompleted = () => {
-    const d = new Date();
-    this.setState({ isLoad: false, time: d.toString() }, () => {
+    this.setState({ isLoad: false }, () => {
       this.showTime("completed");
       this.flagRuning = false;
     });
@@ -95,7 +98,7 @@ class App extends React.Component<AppProps, AppState> {
     }
   };
 
-  updateAppContent = async () => {
+  process = () => {
     if (this.flagRuning === false) {
       Word.run(async context => {
         let flag = await this.detectChange(context);
@@ -118,6 +121,11 @@ class App extends React.Component<AppProps, AppState> {
     }
   };
 
+  updateAppContent = async () => {
+    clearTimeout(this.aliveId);
+    this.aliveId = setTimeout(this.process, 3000);
+  };
+
   showTime = (title: string) => {
     let d = new Date();
     console.log(title, d.toString());
@@ -127,18 +135,87 @@ class App extends React.Component<AppProps, AppState> {
     this.updateAppContent();
   };
 
-  subcribeToEvent = () => {
-    Office.context.document.addHandlerAsync(
-      Office.EventType.DocumentSelectionChanged,
-      this.updateAppContent,
-      asyncResult => {
-        // if (asyncResult.status === '') {
+  subcribeToEvent = async () => {
+    await window.Office.onReady(() => {
+      Office.context.document.addHandlerAsync(Office.EventType.DocumentSelectionChanged, this.updateAppContent);
+    });
+  };
 
-        // }
-        console.log("DocumentSelectionChanged --->", asyncResult);
-        delay(2000);
+  testHandler = () => {
+    Word.run(async context => {
+      // Queue a command to search the document and ignore punctuation.
+      var searchResults = context.document.body
+        .search(
+          "Padraig became an altar boy, wearing white surplice over red cassock, small Celtic cross dangling from a chain around his neck.",
+          { ignorePunct: true }
+        )
+        .getFirst();
+
+      // var searchResults = context.document.body.search(
+      //   "Padraig became an altar boy, wearing white surplice over red cassock, small Celtic cross dangling from a chain around his neck.",
+      //   { ignorePunct: true }
+      // );
+
+      // Queue a command to load the search results and get the font property values.
+      // context.load(searchResults, "font");
+      searchResults.select("Select");
+      await context.sync();
+
+      // Synchronize the document state by executing the queued commands,
+      // and return a promise to indicate task completion.
+      // return context.sync().then(function() {
+      //   console.log("Found count: " + searchResults.items.length);
+
+      //   // Queue a set of commands to change the font for each found item.
+      //   for (var i = 0; i < searchResults.items.length; i++) {
+      //     searchResults.items[i].font.color = "purple";
+      //     searchResults.items[i].font.highlightColor = "#FFFF00"; //Yellow
+      //     searchResults.items[i].font.bold = true;
+      //   }
+
+      // Synchronize the document state by executing the queued commands,
+      // and return a promise to indicate task completion.
+      //   return context.sync();
+      // });
+    }).catch(function(error) {
+      console.log("Error: " + JSON.stringify(error));
+      if (error instanceof OfficeExtension.Error) {
+        console.log("Debug info: " + JSON.stringify(error.debugInfo));
       }
-    );
+    });
+
+    // Word.run(async context => {
+    //   var range = context.document.getSelection().getTextRanges([" "], true);
+    //   context.load(range, "text");
+    //   await context.sync();
+
+    //   console.log("range:", range);
+    // });
+
+    // Word.run(function(context) {
+    //   var range = context.document.getSelection();
+    //   range.select("Select");
+    //   return context.sync();
+    // });
+
+    // Word.run(function(context) {
+    //   var words = context.document.getSelection().getTextRanges([" "], true);
+    //   context.load(words, ["text", "font"]);
+    //   var boldRanges = [];
+    //   return context
+    //     .sync()
+    //     .then(function() {
+    //       for (var i = 0; i < words.items.length; ++i) {
+    //         var word = words.items[i];
+    //         if (word.font.bold) boldRanges.push(word);
+    //       }
+    //     })
+    //     .then(function() {
+    //       for (var j = 0; j < boldRanges.length; ++j) {
+    //         boldRanges[j].font.highlightColor = "#FF00FF";
+    //       }
+    //     });
+    // });
   };
 
   renderDetails() {
@@ -176,17 +253,13 @@ class App extends React.Component<AppProps, AppState> {
       return (
         <Progress title={title} logo="assets/logo-filled.png" message="Please sideload your addin to see app body." />
       );
-    } else {
-      this.subcribeToEvent();
     }
-
     return (
       <div>
-        <div>{this.state.isLoad === false ? "completed" : "loading"}</div>
-        <div>{this.state.text}</div>
-        <div>{this.state.time}</div>
-        {this.state.result.list.length}
-        <hr></hr>
+        <div>
+          {/* {this.state.text} */}
+          {this.state.isLoad === false ? "completed" : "loading"} - {this.state.result.list.length}
+        </div>
         <Button
           className="ms-welcome__action"
           buttonType={ButtonType.hero}
@@ -196,7 +269,10 @@ class App extends React.Component<AppProps, AppState> {
         >
           Refresh
         </Button>
+
+        <Button onClick={this.testHandler}>Test</Button>
         <hr></hr>
+
         {chunkDetailsData.isShow === false ? this.renderMaster() : this.renderDetails()}
       </div>
     );
