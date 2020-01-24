@@ -8,7 +8,7 @@ import ChunkDetails from "./ChunkDetails/ChunkDetails";
 import { Analysis } from "./Analysis/Analysis";
 import { Result } from "../models/Result";
 import { ChunkDetailsData } from "../models/ChunkDetailsData";
-// import { Timer } from "../Utils/Timer";
+import { Timer } from "../Utils/Timer";
 import { types } from "../constants/types";
 import { Section } from "../models/Section";
 
@@ -41,7 +41,8 @@ class App extends React.Component<AppProps, AppState> {
 
   componentWillUnmount() {
     clearTimeout(this.timerID);
-    clearInterval(this.aliveId);
+    clearTimeout(this.aliveId);
+    this.unsubcribeToEvent();
   }
 
   componentDidMount() {
@@ -52,9 +53,10 @@ class App extends React.Component<AppProps, AppState> {
     });
 
     // this.aliveId = setInterval(this.keepAlive, 1000);
+    // this.subcribeToEvent();
 
+    this.timerID = setTimeout(this.process);
     this.subcribeToEvent();
-    this.timerID = setTimeout(this.updateAppContent);
   }
 
   detectChange = async context => {
@@ -66,20 +68,40 @@ class App extends React.Component<AppProps, AppState> {
   };
 
   getWordDocument = async context => {
-    let paragraphs = context.document.body.paragraphs;
-    context.load(paragraphs, "text");
+    let body = context.document.body;
+    context.load(body, "text");
     await context.sync();
-    var result = [];
-    paragraphs.items.map(item => {
-      result.push(item.text);
-    });
-    return result;
+    // var result = [];
+
+    var paragraphs = body.text.trim().split("\r");
+    // paragraphs.map((item: string) => {
+    //   result.push(item.trim());
+    // });
+    return paragraphs;
+
+    // let paragraphs = context.document.body.paragraphs;
+    // context.load(paragraphs, "text");
+    // await context.sync();
+    // var result = [];
+    // paragraphs.items.map(item => {
+    //   result.push(item.text);
+    // });
+    // return result;
+
+    // return context.sync().then(function() {
+    //   var result = [];
+    //   paragraphs.items.map(item => {
+    //     result.push(item.text);
+    //   });
+    //   return result;
+    // });
   };
 
   setCompleted = () => {
     this.setState({ isLoad: false }, () => {
       this.showTime("completed");
       this.flagRuning = false;
+      // this.subcribeToEvent();
     });
   };
 
@@ -99,13 +121,16 @@ class App extends React.Component<AppProps, AppState> {
   };
 
   process = () => {
+    // clearTimeout(this.aliveId);
     if (this.flagRuning === false) {
       Word.run(async context => {
         let flag = await this.detectChange(context);
         console.log("result detect ->", flag);
         if (flag === true) {
           this.setLoading();
+
           let data = await this.getWordDocument(context);
+
           // process
           let result: Result = this.analysis.process(data);
           this.updateChunkDetails(result);
@@ -121,12 +146,44 @@ class App extends React.Component<AppProps, AppState> {
     }
   };
 
-  updateAppContent = async () => {
-    clearTimeout(this.aliveId);
-    this.aliveId = setTimeout(this.process, 2000);
+  checking = async () => {
+    let len1: number;
+    let len2: number;
+
+    len1 = await Word.run(async context => {
+      let body1 = context.document.body;
+      context.load(body1, "text");
+      await context.sync();
+
+      return body1.text.length;
+    });
+
+    console.log("===> len1:", len1);
+
+    await Timer.sleep(1500);
+
+    len2 = await Word.run(async context => {
+      let body2 = context.document.body;
+      context.load(body2, "text");
+      await context.sync();
+
+      return body2.text.length;
+    });
+
+    console.log("===> len2:", len2);
+
+    if (len1 === len2) {
+      this.process();
+    }
+    // this.process();
   };
 
-  showTime = (title: string) => {
+  updateAppContent = () => {
+    clearTimeout(this.aliveId);
+    this.aliveId = setTimeout(this.checking, 2500);
+  };
+
+  showTime = (title: string = "-->") => {
     let d = new Date();
     console.log(title, d.toString());
   };
@@ -135,10 +192,12 @@ class App extends React.Component<AppProps, AppState> {
     this.updateAppContent();
   };
 
-  subcribeToEvent = async () => {
-    await window.Office.onReady(() => {
-      Office.context.document.addHandlerAsync(Office.EventType.DocumentSelectionChanged, this.updateAppContent);
-    });
+  subcribeToEvent = () => {
+    Office.context.document.addHandlerAsync(Office.EventType.DocumentSelectionChanged, this.updateAppContent);
+  };
+
+  unsubcribeToEvent = () => {
+    Office.context.document.removeHandlerAsync(Office.EventType.DocumentSelectionChanged, this.updateAppContent);
   };
 
   testHandler = () => {
